@@ -1,0 +1,4 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {createClient} from '@/lib/supabase/client';
+export default function LiveGarage(){const [vehicle,setVehicle]=useState<any>(null);useEffect(()=>{(async()=>{const db=createClient();const o=await db.from('organisations').select('id').eq('slug','scotts-aussie-car-racing').single();if(!o.data)return;const v=await db.from('vehicles').select('id,name,competition_number,make,model,status').eq('organisation_id',o.data.id).eq('status','active').limit(1).maybeSingle();setVehicle(v.data)})()},[]);return <div className="card"><div className="card-label">LIVE VEHICLE</div><h3>{vehicle?.name||'Loading vehicle…'}</h3><div className="metric">{vehicle?.competition_number?`#${vehicle.competition_number}`:'—'}</div><p className="muted">{vehicle?`${vehicle.make||''} ${vehicle.model||''}`:'Supabase Core Vehicle record'}</p></div>}
