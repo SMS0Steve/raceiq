@@ -1,1 +1,5 @@
-export default function Vehicle(){return <><div className="top"><div><div className="eyebrow">Garage / Vehicle</div><h1>Car 195</h1><div className="muted">Vehicle Profile</div></div><div className="status">ACTIVE</div></div><section className="grid"><div className="card"><h3>Setup</h3><p>Baseline and historical setup snapshots.</p></div><div className="card"><h3>Engine</h3><p>Engine identity and engineering data.</p></div><div className="card"><h3>Telemetry</h3><p>AiM MyChron5 · RPM · CHT · EGT</p></div><div className="card"><h3>Tyres</h3><p>Pressure and tyre history.</p></div><div className="card"><h3>Suspension</h3><p>Vehicle suspension configuration.</p></div><div className="card"><h3>Maintenance</h3><p>Run/date/hour based service items.</p></div></section></>}
+import LiveVehicleDetails from '@/components/LiveVehicleDetails';
+
+export default function Vehicle(){
+  return <LiveVehicleDetails/>;
+}
