@@ -1,0 +1,3 @@
+'use client';
+import {useSearchParams} from 'next/navigation';import Link from 'next/link';
+export default function Tasks(){const id=useSearchParams().get('id');return <><div className="top"><div><div className="eyebrow"><Link href={`/team/member?id=${id}`}>Member Profile</Link> / Tasks</div><h1>Assigned Tasks</h1><div className="muted">Tasks assigned to this team member.</div></div><button className="btn">Assign Task</button></div><div className="card"><div className="card-label">TASKS</div><h3>No assigned tasks</h3><p className="muted">Tasks selected from the central Task Library will appear here with status, due date and context.</p></div></>}
