@@ -3,37 +3,32 @@ import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {createClient} from '@/lib/supabase/client';
 
-type Vehicle={id:string;make?:string|null;model?:string|null};
+type Vehicle={id:string;organisation_id:string;make?:string|null;model?:string|null};
 type RaceProfile={competition_number?:string|null};
 type SetupField={id:string;field_key:string;label:string;category:string;unit?:string|null;sort_order:number};
 type Snapshot={id:string;snapshot_name:string;is_current:boolean;values_json:Record<string,string|number|null>;updated_at:string};
 
 export default function CurrentSetup(){
- const [vehicle,setVehicle]=useState<Vehicle|null>(null); const [race,setRace]=useState<RaceProfile|null>(null); const [fields,setFields]=useState<SetupField[]>([]); const [snapshot,setSnapshot]=useState<Snapshot|null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState('');
+ const [vehicle,setVehicle]=useState<Vehicle|null>(null); const [race,setRace]=useState<RaceProfile|null>(null); const [fields,setFields]=useState<SetupField[]>([]); const [snapshot,setSnapshot]=useState<Snapshot|null>(null); const [historyCount,setHistoryCount]=useState(0); const [values,setValues]=useState<Record<string,string>>({}); const [editing,setEditing]=useState(false); const [saving,setSaving]=useState(false); const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [message,setMessage]=useState('');
  useEffect(()=>{(async()=>{try{
   const db=createClient(); const {data:{user},error:ue}=await db.auth.getUser(); if(ue)throw ue; if(!user)throw new Error('Please sign in');
   const {data:a,error:ae}=await db.from('core_person_auth').select('person_id').eq('auth_user_id',user.id).maybeSingle(); if(ae)throw ae; if(!a)throw new Error('Login is not linked to a Core Person');
   const {data:m,error:me}=await db.from('organisation_members').select('organisation_id').eq('person_id',a.person_id).eq('membership_status','active').limit(1).maybeSingle(); if(me)throw me; if(!m)throw new Error('No active team membership found');
-  const {data:v,error:ve}=await db.from('vehicles').select('id,make,model').eq('organisation_id',m.organisation_id).limit(1).maybeSingle(); if(ve)throw ve; setVehicle(v);
-  if(v){
-   const [{data:rp,error:rpe},{data:sf,error:sfe},{data:ss,error:sse}]=await Promise.all([
-    db.from('raceiq_vehicle_profiles').select('competition_number').eq('vehicle_id',v.id).maybeSingle(),
-    db.from('vehicle_setup_fields').select('id,field_key,label,category,unit,sort_order').eq('vehicle_id',v.id).eq('is_active',true).order('sort_order'),
-    db.from('vehicle_setup_snapshots').select('id,snapshot_name,is_current,values_json,updated_at').eq('vehicle_id',v.id).eq('is_current',true).maybeSingle()
-   ]);
-   if(rpe)throw rpe; if(sfe)throw sfe; if(sse)throw sse; setRace(rp); setFields(sf||[]); setSnapshot(ss);
-  }
+  const {data:v,error:ve}=await db.from('vehicles').select('id,organisation_id,make,model').eq('organisation_id',m.organisation_id).limit(1).maybeSingle(); if(ve)throw ve; setVehicle(v);
+  if(v){const [{data:rp,error:rpe},{data:sf,error:sfe},{data:ss,error:sse},{count,error:hce}]=await Promise.all([
+   db.from('raceiq_vehicle_profiles').select('competition_number').eq('vehicle_id',v.id).maybeSingle(),
+   db.from('vehicle_setup_fields').select('id,field_key,label,category,unit,sort_order').eq('vehicle_id',v.id).eq('is_active',true).order('sort_order'),
+   db.from('vehicle_setup_snapshots').select('id,snapshot_name,is_current,values_json,updated_at').eq('vehicle_id',v.id).eq('is_current',true).maybeSingle(),
+   db.from('vehicle_setup_snapshots').select('id',{count:'exact',head:true}).eq('vehicle_id',v.id)
+  ]); if(rpe)throw rpe;if(sfe)throw sfe;if(sse)throw sse;if(hce)throw hce; setRace(rp);setFields(sf||[]);setSnapshot(ss);setHistoryCount(count||0); const initial:Record<string,string>={}; (sf||[]).forEach(f=>{const x=ss?.values_json?.[f.field_key];initial[f.field_key]=x===undefined||x===null?'':String(x)});setValues(initial)}
  }catch(e:any){setError(e.message||'Unable to load setup')}finally{setLoading(false)}})()},[]);
  const name=vehicle?`${vehicle.make||''} ${vehicle.model||''}${race?.competition_number?` #${race.competition_number}`:''}`.trim():'Vehicle';
- const groups=useMemo(()=>{const g:Record<string,SetupField[]>={}; fields.forEach(f=>(g[f.category]??=[]).push(f)); return g},[fields]);
- const value=(f:SetupField)=>{const v=snapshot?.values_json?.[f.field_key]; return v===undefined||v===null||v===''?'Not set':`${v}${f.unit?` ${f.unit}`:''}`};
- return <>
-  <div className="top"><div><div className="eyebrow">Garage / Vehicle / Setup</div><h1>Current Setup</h1><div className="muted">{loading?'Loading vehicle…':error?error:name}</div></div><div className="status">{snapshot?.snapshot_name?.toUpperCase()||'BASELINE'}</div></div>
-  <section className="grid">
-   {Object.entries(groups).map(([category,items])=><div className="card" key={category}><div className="card-label">{category.toUpperCase()}</div><h3>{category}</h3><p className="muted">{items.map((f,i)=><span key={f.id}>{f.label}: {value(f)}{i<items.length-1&&<br/>}</span>)}</p></div>)}
-   <div className="card"><div className="card-label">ENGINE</div><h3>Engine Setup</h3><p className="muted">Engine parameters will use the same configurable setup model.</p></div>
-   <div className="card"><div className="card-label">SETUP HISTORY</div><h3>Snapshots</h3><p className="muted">{snapshot?`Current: ${snapshot.snapshot_name}`:'No baseline snapshot saved yet.'}</p></div>
-  </section>
-  <div className="actions"><Link className="btn" href="/garage/vehicle">Back to Vehicle</Link></div>
- </>;
+ const groups=useMemo(()=>{const g:Record<string,SetupField[]>={};fields.forEach(f=>(g[f.category]??=[]).push(f));return g},[fields]);
+ const shown=(f:SetupField)=>{const x=snapshot?.values_json?.[f.field_key];return x===undefined||x===null||x===''?'Not set':`${x}${f.unit?` ${f.unit}`:''}`};
+ const cancel=()=>{const reset:Record<string,string>={};fields.forEach(f=>{const x=snapshot?.values_json?.[f.field_key];reset[f.field_key]=x===undefined||x===null?'':String(x)});setValues(reset);setEditing(false);setMessage('')};
+ const save=async()=>{if(!vehicle)return;setSaving(true);setError('');setMessage('');try{const db=createClient();const payload:Record<string,string|number|null>={};fields.forEach(f=>{const raw=(values[f.field_key]??'').trim();payload[f.field_key]=raw===''?null:(Number.isNaN(Number(raw))?raw:Number(raw))});if(snapshot){const {error:e}=await db.from('vehicle_setup_snapshots').update({is_current:false}).eq('id',snapshot.id);if(e)throw e}const stamp=new Date();const snapshotName=snapshot?`Setup ${stamp.toLocaleDateString('en-AU')} ${stamp.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}`:'Baseline';const {data:newSnap,error:ie}=await db.from('vehicle_setup_snapshots').insert({organisation_id:vehicle.organisation_id,vehicle_id:vehicle.id,snapshot_name:snapshotName,is_current:true,values_json:payload}).select('id,snapshot_name,is_current,values_json,updated_at').single();if(ie){if(snapshot)await db.from('vehicle_setup_snapshots').update({is_current:true}).eq('id',snapshot.id);throw ie}setSnapshot(newSnap);setHistoryCount(c=>c+1);setEditing(false);setMessage(snapshot?'Setup saved — previous setup retained in history.':'Baseline saved.')}catch(e:any){setError(e.message||'Unable to save setup')}finally{setSaving(false)}};
+ return <><div className="top"><div><div className="eyebrow">Garage / Vehicle / Setup</div><h1>Current Setup</h1><div className="muted">{loading?'Loading vehicle…':error?error:name}</div></div><div className="status">{snapshot?.snapshot_name?.toUpperCase()||'BASELINE'}</div></div>
+ <section className="grid">{Object.entries(groups).map(([category,items])=><div className="card" key={category}><div className="card-label">{category.toUpperCase()}</div><h3>{category}</h3><div className="muted">{items.map(f=><div key={f.id} style={{marginBottom:8}}>{editing?<label style={{display:'flex',alignItems:'center',gap:8}}><span style={{minWidth:130}}>{f.label}</span><input aria-label={f.label} type="number" step="any" value={values[f.field_key]??''} onChange={e=>setValues(x=>({...x,[f.field_key]:e.target.value}))} style={{width:100,padding:'7px 8px',borderRadius:6,border:'1px solid #344038',background:'#0b0f0d',color:'white'}}/>{f.unit&&<span>{f.unit}</span>}</label>:<span>{f.label}: {shown(f)}</span>}</div>)}</div></div>)}
+ <div className="card"><div className="card-label">ENGINE</div><h3>Engine Setup</h3><p className="muted">Engine parameters will use the same configurable setup model.</p></div><div className="card"><div className="card-label">SETUP HISTORY</div><h3>Snapshots</h3><p className="muted">{snapshot?`Current: ${snapshot.snapshot_name}`:'No baseline snapshot saved yet.'}<br/>Saved setups: {historyCount}</p></div></section>
+ <div className="actions" style={{display:'flex',gap:10,alignItems:'center'}}><Link className="btn" href="/garage/vehicle">Back to Vehicle</Link>{!editing?<button className="btn" onClick={()=>setEditing(true)}>Edit Setup</button>:<><button className="btn" onClick={save} disabled={saving}>{saving?'Saving…':snapshot?'Save Setup':'Save Baseline'}</button><button className="btn" onClick={cancel} disabled={saving}>Cancel</button></>}{message&&<span className="muted">{message}</span>}</div></>;
 }
