@@ -1,0 +1,5 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {usePathname,useRouter} from 'next/navigation';
+import {createClient} from '@/lib/supabase/client';
+export default function AuthGate({children}:{children:React.ReactNode}){const path=usePathname();const router=useRouter();const[checking,setChecking]=useState(true);useEffect(()=>{if(path==='/login'){setChecking(false);return;}const db=createClient();db.auth.getSession().then(({data})=>{if(!data.session)router.replace('/login');else setChecking(false)});const{data:sub}=db.auth.onAuthStateChange((_e,session)=>{if(!session&&path!='/login')router.replace('/login')});return()=>sub.subscription.unsubscribe()},[path,router]);if(path==='/login')return <>{children}</>;if(checking)return <div className="auth-loading"><div className="brand">Race<span>IQ</span></div><p>Checking secure session…</p></div>;return <>{children}</>}
