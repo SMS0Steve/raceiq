@@ -1,6 +1,53 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {createClient} from '@/lib/supabase/client';
-const ORG='scotts-aussie-car-racing';
+
 type State={org:string;members:number;vehicles:number;nextEvent:string;venue:string;readiness:string;loading:boolean;error?:string};
-export default function LiveHome(){const [s,setS]=useState<State>({org:"Scott's Aussie Car Racing",members:0,vehicles:0,nextEvent:'No event scheduled',venue:'',readiness:'PENDING',loading:true});useEffect(()=>{(async()=>{try{const db=createClient();const {data:o,error}=await db.from('organisations').select('id,name').eq('slug',ORG).single();if(error)throw error;const [{count:members},{count:vehicles},{data:event}]=await Promise.all([db.from('organisation_people').select('*',{count:'exact',head:true}).eq('organisation_id',o.id),db.from('vehicles').select('*',{count:'exact',head:true}).eq('organisation_id',o.id),db.from('events').select('id,name,venue_name,start_date').eq('organisation_id',o.id).gte('end_date',new Date().toISOString().slice(0,10)).order('start_date').limit(1).maybeSingle()]);let readiness='PENDING';if(event){const {data:entry}=await db.from('event_entries').select('id').eq('event_id',event.id).limit(1).maybeSingle();if(entry){const {data:r}=await db.from('event_readiness_summary').select('readiness_status').eq('event_entry_id',entry.id).maybeSingle();if(r)readiness=r.readiness_status;}}setS({org:o.name,members:members||0,vehicles:vehicles||0,nextEvent:event?.name||'No event scheduled',venue:event?.venue_name||'',readiness,loading:false});}catch(e:any){setS(x=>({...x,loading:false,error:e.message||'Unable to load live data'}));}})()},[]);return <><div className="live-strip"><span className="card-label">LIVE SUPABASE</span><strong>{s.loading?'Connecting…':s.error?'Connection requires login/environment':s.org}</strong></div><section className="dashboard-grid"><div className="card"><div className="card-label">NEXT EVENT</div><h3>{s.nextEvent}</h3><div className="metric">{s.readiness}</div><p className="muted">{s.venue||'Event readiness will appear here.'}</p></div><div className="card"><div className="card-label">VEHICLES</div><h3>Garage</h3><div className="metric">{s.loading?'—':s.vehicles}</div><p className="muted">Active Core vehicle records.</p></div><div className="card"><div className="card-label">TEAM</div><h3>People</h3><div className="metric">{s.loading?'—':s.members}</div><p className="muted">People linked to this team.</p></div></section>{s.error&&<p className="data-note">Live data: {s.error}</p>}</>;}
+
+export default function LiveHome(){
+  const [s,setS]=useState<State>({org:"Scott's Aussie Car Racing",members:0,vehicles:0,nextEvent:'No event scheduled',venue:'',readiness:'PENDING',loading:true});
+
+  useEffect(()=>{(async()=>{
+    try{
+      const db=createClient();
+      const {data:{user},error:userError}=await db.auth.getUser();
+      if(userError)throw userError;
+      if(!user)throw new Error('Please sign in to load RaceIQ data');
+
+      const {data:authLink,error:authError}=await db.from('core_person_auth').select('person_id').eq('auth_user_id',user.id).maybeSingle();
+      if(authError)throw authError;
+      if(!authLink)throw new Error('Your login is not linked to a Core Person');
+
+      const {data:membership,error:membershipError}=await db.from('organisation_members').select('organisation_id').eq('person_id',authLink.person_id).eq('membership_status','active').limit(1).maybeSingle();
+      if(membershipError)throw membershipError;
+      if(!membership)throw new Error('No active team membership found');
+
+      const {data:o,error:orgError}=await db.from('organisations').select('id,name').eq('id',membership.organisation_id).single();
+      if(orgError)throw orgError;
+
+      const now=new Date().toISOString();
+      const [{count:members,error:membersError},{count:vehicles,error:vehiclesError},{data:event,error:eventError}]=await Promise.all([
+        db.from('organisation_members').select('*',{count:'exact',head:true}).eq('organisation_id',o.id).eq('membership_status','active'),
+        db.from('vehicles').select('*',{count:'exact',head:true}).eq('organisation_id',o.id),
+        db.from('events').select('id,title,location,starts_at,ends_at').eq('organisation_id',o.id).gte('ends_at',now).order('starts_at').limit(1).maybeSingle()
+      ]);
+      if(membersError)throw membersError;
+      if(vehiclesError)throw vehiclesError;
+      if(eventError)throw eventError;
+
+      setS({org:o.name,members:members||0,vehicles:vehicles||0,nextEvent:event?.title||'No event scheduled',venue:event?.location||'',readiness:event?'EVENT SET':'PENDING',loading:false});
+    }catch(e:any){
+      setS(x=>({...x,loading:false,error:e.message||'Unable to load live data'}));
+    }
+  })()},[]);
+
+  return <>
+    <div className="live-strip"><span className="card-label">LIVE SUPABASE</span><strong>{s.loading?'Connecting…':s.error?'Connection requires login/environment':s.org}</strong></div>
+    <section className="dashboard-grid">
+      <div className="card"><div className="card-label">NEXT EVENT</div><h3>{s.nextEvent}</h3><div className="metric">{s.readiness}</div><p className="muted">{s.venue||'Event readiness will appear here.'}</p></div>
+      <div className="card"><div className="card-label">VEHICLES</div><h3>Garage</h3><div className="metric">{s.loading?'—':s.vehicles}</div><p className="muted">Active Core vehicle records.</p></div>
+      <div className="card"><div className="card-label">TEAM</div><h3>People</h3><div className="metric">{s.loading?'—':s.members}</div><p className="muted">People linked to this team.</p></div>
+    </section>
+    {s.error&&<p className="data-note">Live data: {s.error}</p>}
+  </>;
+}
