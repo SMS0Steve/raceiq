@@ -1,0 +1,3 @@
+import Link from 'next/link';
+
+export default function Income(){return <><header className="top"><div><div className="eyebrow"><Link href="/money">Money</Link> / Income</div><h1>Income</h1><div className="muted">Team racing income and contributions.</div></div></header><section className="card"><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16}}><div><div className="card-label">INCOME</div><h3 style={{marginBottom:0}}>Income Transactions</h3></div><Link className="btn" href="/money/income/add">Add Income</Link></div><div style={{marginTop:18,borderTop:'1px solid var(--line)',paddingTop:18}}><div className="metric">—</div><p className="muted">No income transactions recorded yet.</p></div></section></>}
