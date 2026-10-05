@@ -3,10 +3,11 @@ import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import {createClient} from '@/lib/supabase/client';
 
-type EventState={title:string;location:string;date:string;id:string;loading:boolean;error?:string};
+type RaceEvent={id:string;title:string;location:string|null;starts_at:string;ends_at:string|null};
+type EventState={events:RaceEvent[];loading:boolean;error?:string};
 
 export default function Race() {
-  const [event,setEvent]=useState<EventState>({title:'No event scheduled',location:'',date:'',id:'',loading:true});
+  const [state,setState]=useState<EventState>({events:[],loading:true});
 
   useEffect(()=>{(async()=>{try{
     const db=createClient();
@@ -14,13 +15,24 @@ export default function Race() {
     const {data:a,error:ae}=await db.from('core_person_auth').select('person_id').eq('auth_user_id',user.id).maybeSingle();if(ae)throw ae;if(!a)throw new Error('Login is not linked to a Core Person');
     const {data:m,error:me}=await db.from('organisation_members').select('organisation_id').eq('person_id',a.person_id).eq('membership_status','active').limit(1).maybeSingle();if(me)throw me;if(!m)throw new Error('No active team membership found');
     const now=new Date().toISOString();
-    const {data:e,error:ee}=await db.from('events').select('id,title,location,starts_at,ends_at').eq('organisation_id',m.organisation_id).or(`ends_at.gte.${now},and(ends_at.is.null,starts_at.gte.${now})`).order('starts_at').limit(1).maybeSingle();if(ee)throw ee;
-    setEvent({title:e?.title||'No event scheduled',location:e?.location||'',date:e?.starts_at?new Date(e.starts_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}):'',id:e?.id||'',loading:false});
-  }catch(err:any){setEvent(x=>({...x,loading:false,error:err.message||'Unable to load event'}))}})()},[]);
+    const {data,error}=await db.from('events').select('id,title,location,starts_at,ends_at').eq('organisation_id',m.organisation_id).or(`ends_at.gte.${now},and(ends_at.is.null,starts_at.gte.${now})`).order('starts_at',{ascending:true});if(error)throw error;
+    setState({events:data||[],loading:false});
+  }catch(err:any){setState({events:[],loading:false,error:err.message||'Unable to load events'})}})()},[]);
 
-  return <><div className="top"><div><div className="eyebrow">Race</div><h1>Race Centre</h1><div className="muted">Events, readiness, runs and Track Mode.</div></div></div>{event.error&&<p className="data-note">{event.error}</p>}<section className="grid">
-    <Link className="card card-link" href={event.id?`/race/events/${event.id}`:'/race/events'}><div className="card-label">NEXT EVENT</div><h3>{event.loading?'Loading…':event.title}</h3>{event.date&&<div className="metric">{event.date}</div>}<p className="muted">{event.location||'Create and manage race events, dates, venues and event details.'}</p></Link>
-    <div className="card"><div className="card-label">READINESS</div><h3>Event Readiness</h3><div className="metric">{event.id?'EVENT SET':'PENDING'}</div><p className="muted">Driver · Vehicle · Crew · Maintenance · Safety · Packing</p></div>
+  const fmt=(value:string)=>new Date(value).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
+  const today=Date.now();
+
+  return <><div className="top"><div><div className="eyebrow">Race</div><h1>Race Centre</h1><div className="muted">Events, readiness, runs and Track Mode.</div></div></div>{state.error&&<p className="data-note">{state.error}</p>}<section className="grid">
+    <div className="card" style={{gridColumn:'span 2'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,marginBottom:12}}><div><div className="card-label">EVENTS</div><h3 style={{marginBottom:0}}>Upcoming Events</h3></div><Link className="btn" href="/race/events/add">Add Event</Link></div>
+      <div style={{borderTop:'1px solid var(--line)',maxHeight:230,overflowY:'auto'}}>
+        {state.loading?<p className="muted" style={{padding:'16px 0'}}>Loading events…</p>:state.events.length===0?<p className="muted" style={{padding:'16px 0'}}>No upcoming events. Add an event to begin planning.</p>:state.events.map(e=>{
+          const start=new Date(e.starts_at).getTime();const end=e.ends_at?new Date(e.ends_at).getTime():start;const status=today>=start&&today<=end?'ACTIVE':'UPCOMING';
+          return <Link key={e.id} href={`/race/events/${e.id}`} className="card-link" style={{display:'grid',gridTemplateColumns:'1.5fr .8fr .7fr',gap:18,alignItems:'center',padding:'14px 10px',borderBottom:'1px solid var(--line)',textDecoration:'none'}}><div><strong>{e.title}</strong><div className="muted">{e.location||'Location not recorded'}</div></div><div><div className="card-label">DATE</div><div>{fmt(e.starts_at)}</div></div><div><div className="card-label">STATUS</div><div className="status">{status}</div></div></Link>
+        })}
+      </div>
+    </div>
+    <div className="card"><div className="card-label">READINESS</div><h3>Event Readiness</h3><div className="metric">{state.events.length?'EVENT SET':'PENDING'}</div><p className="muted">Driver · Vehicle · Crew · Maintenance · Safety · Packing</p></div>
     <div className="card"><div className="card-label">RUNS</div><h3>Runs</h3><div className="metric">—</div><p className="muted">Incrementals and run comparison will populate here.</p></div>
     <div className="card"><div className="card-label">TRACK MODE</div><h3>Track Mode</h3><div className="status">Available when event is active</div></div>
   </section></>;
