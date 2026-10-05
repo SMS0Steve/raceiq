@@ -1,0 +1,3 @@
+import Link from 'next/link';
+
+export default function Expenses(){return <><header className="top"><div><div className="eyebrow"><Link href="/money">Money</Link> / Expenses</div><h1>Expenses</h1><div className="muted">Team racing costs and purchases.</div></div></header><section className="card"><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16}}><div><div className="card-label">EXPENSES</div><h3 style={{marginBottom:0}}>Expense Transactions</h3></div><Link className="btn" href="/money/expenses/add">Add Expense</Link></div><div style={{marginTop:18,borderTop:'1px solid var(--line)',paddingTop:18}}><div className="metric">—</div><p className="muted">No expense transactions recorded yet.</p></div></section></>}
