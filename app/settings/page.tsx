@@ -1,1 +1,11 @@
-export default function Settings(){return <><header className="top"><div><div className="eyebrow">RaceIQ</div><h1>Settings</h1><div className="muted">Team, users and platform configuration.</div></div></header><div className="panel"><h2>Organisation Settings</h2><p className="muted">Role permissions, vehicle fields, integrations and team configuration will be managed here.</p></div></>}
+'use client';
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+import {createClient} from '@/lib/supabase/client';
+
+type Team={id:string;name:string};
+export default function Settings(){
+ const [team,setTeam]=useState<Team|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState('');
+ useEffect(()=>{(async()=>{try{const db=createClient();const {data:{user},error:ue}=await db.auth.getUser();if(ue)throw ue;if(!user)throw new Error('Please sign in to load team settings');const {data:a,error:ae}=await db.from('core_person_auth').select('person_id').eq('auth_user_id',user.id).maybeSingle();if(ae)throw ae;if(!a)throw new Error('Login is not linked to a Core Person');const {data:m,error:me}=await db.from('organisation_members').select('organisation_id').eq('person_id',a.person_id).eq('membership_status','active').limit(1).maybeSingle();if(me)throw me;if(!m)throw new Error('No active team membership found');const {data:o,error:oe}=await db.from('organisations').select('id,name').eq('id',m.organisation_id).single();if(oe)throw oe;setTeam(o);}catch(e:any){setError(e.message||'Unable to load settings')}finally{setLoading(false)}})()},[]);
+ return <><header className="top"><div><div className="eyebrow">RaceIQ / Settings</div><h1>Settings</h1><div className="muted">Team, users and platform configuration.</div></div></header>{error&&<p className="data-note">{error}</p>}<section className="grid"><Link className="card card-link" href="/settings/team-profile"><div className="card-label">TEAM</div><h3>Team Profile</h3><p className="muted">Edit team identity, branding, logo and hero image.</p><div className="status">{loading?'Loading…':team?.name||'Team Profile'}</div></Link><div className="card"><div className="card-label">USERS & ACCESS</div><h3>Administration</h3><p className="muted">RaceIQ administration permissions and user access.</p></div><div className="card"><div className="card-label">CONFIGURATION</div><h3>Platform Settings</h3><p className="muted">Vehicle fields, task library and integrations.</p></div></section></>;
+}
