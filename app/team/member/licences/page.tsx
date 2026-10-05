@@ -1,0 +1,3 @@
+'use client';
+import {useSearchParams} from 'next/navigation';import Link from 'next/link';
+export default function Licences(){const id=useSearchParams().get('id');return <><div className="top"><div><div className="eyebrow"><Link href={`/team/member?id=${id}`}>Member Profile</Link> / Licences</div><h1>Licences & Credentials</h1><div className="muted">Driver licence, qualifications and credentials.</div></div></div><section className="grid"><div className="card"><div className="card-label">DRIVER LICENCE</div><h3>Driver Licence</h3><p>Licence No: Not recorded</p><p>Status: Not recorded</p><p>Expiry: Not recorded</p><p className="muted">The current driver licence number is used as the driver's race number.</p></div></section></>}
