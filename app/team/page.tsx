@@ -1,2 +1,3 @@
 import Link from 'next/link';
-export default function Team(){return <><div className="top"><div><div className="eyebrow">Scott's Aussie Car Racing</div><h1>Team</h1><div className="muted">People, roles, credentials and safety.</div></div></div><div className="card"><h3>Team Members</h3><table><thead><tr><th>Member</th><th>Role</th><th>Status</th></tr></thead><tbody><tr><td><Link href="/team/member">Driver Profile</Link></td><td>Driver</td><td className="status">Active</td></tr><tr><td>Team Manager</td><td>Team Manager</td><td className="status">Active</td></tr></tbody></table></div></>}
+import LiveTeamMembers from '@/components/LiveTeamMembers';
+export default function Team(){return <><div className="top"><div><div className="eyebrow">Team</div><h1>Team Members</h1><div className="muted">Select a team member to open their profile.</div></div><Link className="btn" href="/team/add">Add Member</Link></div><LiveTeamMembers/></>}
