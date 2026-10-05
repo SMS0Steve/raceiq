@@ -1,2 +1,3 @@
 import LiveTeamMembers from '@/components/LiveTeamMembers';
-export default function Team(){return <><div className="top"><div><div className="eyebrow">Team</div><h1>Team Members</h1><div className="muted">Select a team member to open their profile.</div></div></div><LiveTeamMembers/></>}
+import TeamPageHeader from '@/components/TeamPageHeader';
+export default function Team(){return <><TeamPageHeader module="Team" title="Team Members" subtitle="Select a team member to open their profile."/><LiveTeamMembers/></>}
