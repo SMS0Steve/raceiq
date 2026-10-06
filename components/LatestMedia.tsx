@@ -21,7 +21,9 @@ export default function LatestMedia(){
   setItems((data||[]).map((x:any)=>({...x,url:db.storage.from('media-library').getPublicUrl(x.storage_path).data.publicUrl})));
  }catch{}})()},[]);
 
- useEffect(()=>{if(!selected)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(null)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[selected]);\n\n const isVideo=(x:Asset)=>!!(x.mime_type?.startsWith('video/')||x.asset_type?.toLowerCase()==='video');
+ useEffect(()=>{if(!selected)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(null)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[selected]);
+
+ const isVideo=(x:Asset)=>!!(x.mime_type?.startsWith('video/')||x.asset_type?.toLowerCase()==='video');
 
  return <>
   <div className="panel">
