@@ -1,3 +1,3 @@
-import Link from 'next/link';
 import LiveHome from '@/components/LiveHome';
-export default function Home(){return <><LiveHome/><section className="work-row"><div className="panel"><div className="card-label">QUICK ACTIONS</div><h2>Get to work</h2><div className="actions"><Link className="btn" href="/race">Open Race Centre</Link><Link className="btn secondary" href="/garage">Open Garage</Link><Link className="btn secondary" href="/team">View Team</Link></div></div><div className="panel"><div className="card-label">RACEIQ PRINCIPLE</div><h2>One clear next action.</h2><p className="muted">RaceIQ should reduce the team's workload, not become another job at the racetrack.</p></div></section></>}
+import LatestMedia from '@/components/LatestMedia';
+export default function Home(){return <><LiveHome/><section className="work-row"><LatestMedia/><div className="panel"><div className="card-label">RACEIQ PRINCIPLE</div><h2>One clear next action.</h2><p className="muted">RaceIQ should reduce the team's workload, not become another job at the racetrack.</p></div></section></>}
